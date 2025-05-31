@@ -52,5 +52,5 @@ async def on_member_join(member):
         else:
             print("역할 부여 실패 (위치 또는 존재 문제)")
 # 실행
-bot.run(os.getenv("MTM3NzU0NTg1MTczNTY0MjEyMg.G460xi.vjby6Vk_9tS4JUH5oR6awmtP-fFXPf3EXnrZGI"))
+bot.run("MTM3NzU0NTg1MTczNTY0MjEyMg.G460xi.vjby6Vk_9tS4JUH5oR6awmtP-fFXPf3EXnrZGI")
 
