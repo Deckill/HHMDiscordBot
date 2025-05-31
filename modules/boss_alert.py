@@ -60,7 +60,8 @@ def setup(bot):
     async def check_schedule():
         now = get_korea_time()
         for guild in bot.guilds:
-            channel = discord.utils.get(guild.text_channels, name='알림')
+            channel_id = 1378380187951169546  # 여기에 실제 채널 ID 입력
+            channel = bot.get_channel(channel_id)
             if not channel:
                 continue
             if now.endswith(":00"):
