@@ -10,8 +10,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 invite_cache = {}
 
 invite_code_to_role = {
-    "CuWGSvfZpx": "길드원",
-    "tVGjaQMyAF": "손님"
+    os.getenv("GUILD_INVITATION"): "길드원",
+    os.getenv("WORLD_INVITATION"): "손님"
 }
 
 
@@ -52,5 +52,5 @@ async def on_member_join(member):
         else:
             print("역할 부여 실패 (위치 또는 존재 문제)")
 # 실행
-bot.run("MTM3NzU0NTg1MTczNTY0MjEyMg.G460xi.vjby6Vk_9tS4JUH5oR6awmtP-fFXPf3EXnrZGI")
+bot.run(os.getenv("DISCORD_TOKEN"))
 
