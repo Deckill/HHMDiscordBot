@@ -10,8 +10,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 invite_cache = {}
 
 invite_code_to_role = {
-    "GUILD_INVITATION": "길드원",
-    "WORLD_INVITATION": "손님"
+    "CuWGSvfZpx": "길드원",
+    "tVGjaQMyAF": "손님"
 }
 
 
