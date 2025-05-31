@@ -37,13 +37,6 @@ async def on_ready():
         invite_cache[guild.id] = {invite.code: invite.uses for invite in invites}
 
 @bot.event
-async def on_ready():
-    for guild in bot.guilds:
-        invites = await guild.invites()
-        invite_cache[guild.id] = {invite.code: invite.uses for invite in invites}
-    print(f"{bot.user} 작동 중!")
-
-@bot.event
 async def on_member_join(member):
     await asyncio.sleep(2)
     guild = member.guild
