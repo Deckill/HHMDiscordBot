@@ -2,7 +2,21 @@ import os
 import discord
 import asyncio
 from discord.ext import commands
+from flask import Flask
+from threading import Thread
 
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "✅ 봇 작동 중입니다!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 intents = discord.Intents.default()
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -52,5 +66,6 @@ async def on_member_join(member):
         else:
             print("역할 부여 실패 (위치 또는 존재 문제)")
 # 실행
+keep_alive()
 bot.run(os.getenv("DISCORD_TOKEN"))
 
