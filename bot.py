@@ -27,11 +27,13 @@ async def on_ready():
     # 각 모듈 초기화
     await invite_role.initialize(bot)
     await boss_alert.initialize(bot)
-    await bot.tree.sync()
+    await bot.tree.sync(guild=discord.Object(id=1375766625164202104))
 
     # 루프 시작은 봇이 완전히 켜진 이후에만!
     if not boss_alert.check_schedule.is_running():
         boss_alert.check_schedule.start()
+    for cmd in bot.tree.walk_commands():
+        print(f"🔧 등록된 슬래시 명령어: /{cmd.name} - {cmd.description}")
 
 if __name__ == "__main__":
     bot.run(os.getenv("DISCORD_TOKEN"))

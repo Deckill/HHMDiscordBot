@@ -20,13 +20,13 @@ def get_korea_time():
 
 async def setup_alert_command(bot):
     @bot.tree.command(name="알림설정", description="알림 역할 버튼을 표시합니다.")
-    async def show_alert_buttons(interaction: discord.Interaction):
+    async def alert_command(interaction: discord.Interaction):
         embed = discord.Embed(
             title="역할 알림 설정",
             description="버튼을 눌러 알림을 켜거나 끌 수 있습니다.",
             color=discord.Color.green()
         )
-        await interaction.response.send_message(embed=embed, view=RoleView(), ephemeral=True)
+        await interaction.response.send_message(embed=embed, view=RoleView())
 # def setup(bot):
 #     @bot.command(name="역할설정")
 #     async def show_role_menu(ctx):
