@@ -22,6 +22,5 @@ async def on_message(message):
 async def ping(ctx):
     print("✅ !ping 명령어 호출됨")
     await ctx.send("pong!")
-
-bot.run("DISCORD_TOKEN")
+bot.run(os.getenv("DISCORD_TOKEN"))
 
