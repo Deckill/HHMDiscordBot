@@ -19,7 +19,10 @@ intents.invites = True
 intents.presences = False
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-
+@bot.event
+async def on_message(message):
+    print(f"📩 수신된 메시지: {message.content} (from {message.author})")
+    await bot.process_commands(message)  # 이 줄을 꼭 넣어야 명령어가 처리됨
 @bot.event
 async def on_ready():
     logger.info(f"✅ {bot.user} 봇 작동 시작!")
