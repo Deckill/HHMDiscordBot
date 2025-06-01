@@ -25,7 +25,7 @@ async def on_ready():
     logger.info(f"✅ {bot.user} 봇 작동 시작!")
 
     # 모듈 초기화
-    invite_role.setup(bot)         # 🔧 리스너 등록
+    # invite_role.setup(bot)         # 🔧 리스너 등록
     boss_alert.setup(bot)
 
     await invite_role.initialize(bot)
