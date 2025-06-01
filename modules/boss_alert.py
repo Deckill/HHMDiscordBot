@@ -1,7 +1,6 @@
 import discord
 from discord.ext import tasks, commands
 from datetime import datetime, timedelta, timezone
-from discord import app_commands
 import logging
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
@@ -18,24 +17,15 @@ invite_code_to_role = {}  # 이 모듈에선 사용하지 않음
 def get_korea_time():
     return datetime.now(KST).strftime("%H:%M")
 
-async def setup_alert_command(bot):
-    @bot.tree.command(name="알림설정", description="알림 역할 버튼을 표시합니다.")
-    async def alert_command(interaction: discord.Interaction):
+def setup(bot):
+    @bot.command(name="역할설정")
+    async def show_role_menu(ctx):
         embed = discord.Embed(
             title="역할 알림 설정",
             description="버튼을 눌러 알림을 켜거나 끌 수 있습니다.",
             color=discord.Color.green()
         )
-        await interaction.response.send_message(embed=embed, view=RoleView())
-# def setup(bot):
-#     @bot.command(name="역할설정")
-#     async def show_role_menu(ctx):
-#         embed = discord.Embed(
-#             title="역할 알림 설정",
-#             description="버튼을 눌러 알림을 켜거나 끌 수 있습니다.",
-#             color=discord.Color.green()
-#         )
-#         await ctx.send(embed=embed, view=RoleView())
+        await ctx.send(embed=embed, view=RoleView())
 
 class RoleView(discord.ui.View):
     def __init__(self):
@@ -122,6 +112,6 @@ async def check_schedule():
 
 
 async def initialize(bot):
-    bot.add_view(RoleView())  # 버튼 유지용
+    bot.add_view(RoleView())
     check_schedule.bot = bot
-    await setup_alert_command(bot)  # 슬래시 명령어 등록
+    # 루프 시작은 bot.py 의 on_ready 에서 수행
