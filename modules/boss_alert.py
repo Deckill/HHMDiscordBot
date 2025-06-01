@@ -1,5 +1,5 @@
 import discord
-from discord.ext import tasks, commands
+from discord.ext import tasks
 from datetime import datetime, timedelta, timezone
 import logging
 
@@ -12,29 +12,19 @@ BOSS_TIMES = ['12:00', '18:00', '20:00', '22:00']
 TARGET_GUILD_ID = 1375766625164202104
 channel_id = 1378380187951169546
 
+
 def get_korea_time():
     return datetime.now(KST).strftime("%H:%M")
 
-def setup(bot):
-    @bot.command(name="알림설정")
-    async def show_role_menu(ctx):
-        logger.info(f"!알림설정 호출됨 by {ctx.author} in {ctx.guild.name}")
-        embed = discord.Embed(
-            title="역할 알림 설정",
-            description="버튼을 눌러 알림을 켜거나 끌 수 있습니다.",
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed, view=RoleView())
 
 class RoleView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="결계 알림", emoji="❄️", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="결계 알림", emoji="❄️", style=discord.ButtonStyle.primary, custom_id="barrier_alert")
     async def barrier_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         member = interaction.user
         role_name = "결계"
-
         role = discord.utils.get(member.guild.roles, name=role_name)
         if not role:
             await interaction.response.send_message("❌ 역할을 찾을 수 없습니다", ephemeral=True)
@@ -53,14 +43,14 @@ class RoleView(discord.ui.View):
             except discord.NotFound:
                 await interaction.followup.send(f"{role_name} 부여됨 (followup)", ephemeral=True)
 
-
-    @discord.ui.button(label="필드 보스", style=discord.ButtonStyle.danger, custom_id="boss_role", emoji="🔥")
+    @discord.ui.button(label="필드 보스", style=discord.ButtonStyle.danger, emoji="🔥", custom_id="boss_alert")
     async def boss_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         role_name = "필드 보스"
         role = discord.utils.get(interaction.guild.roles, name=role_name)
         if not role:
             role = await interaction.guild.create_role(name=role_name, color=discord.Color.red())
             logger.info(f"역할 생성됨: {role_name}")
+
         if role in interaction.user.roles:
             await interaction.user.remove_roles(role)
             await interaction.response.send_message(f"{role_name} 제거됨", ephemeral=True)
@@ -70,6 +60,7 @@ class RoleView(discord.ui.View):
             await interaction.response.send_message(f"{role_name} 추가됨", ephemeral=True)
             logger.info(f"{interaction.user}에게 {role_name} 추가됨")
 
+
 def create_embed(type_name, emoji):
     return discord.Embed(
         title=f"{emoji} {type_name} 알림",
@@ -77,21 +68,23 @@ def create_embed(type_name, emoji):
         color=discord.Color.blue() if type_name == "결계" else discord.Color.red()
     ).add_field(name="시간", value=get_korea_time()).set_footer(text="마비노기 모바일")
 
+
 async def send_notification(notification_type, channel, guild):
     if notification_type == "barrier":
         role = discord.utils.get(guild.roles, name="결계 알림")
-        if role and any(member.bot is False for member in role.members):
+        if role and any(not member.bot for member in role.members):
             await channel.send(content=f"{role.mention}", embed=create_embed("결계", "🌟"))
             logger.info("결계 알림 송신됨")
         else:
             logger.warning("결계 알림 역할이 없거나 유저 없음")
     elif notification_type == "boss":
         role = discord.utils.get(guild.roles, name="필드 보스")
-        if role and any(member.bot is False for member in role.members):
+        if role and any(not member.bot for member in role.members):
             await channel.send(content=f"{role.mention}", embed=create_embed("보스", "🔥"))
             logger.info("보스 알림 송신됨")
         else:
             logger.warning("보스 역할이 없거나 유저 없음")
+
 
 @tasks.loop(minutes=1)
 async def check_schedule():
@@ -112,7 +105,18 @@ async def check_schedule():
             logger.info("🔥 보스 알림 조건 충족")
             await send_notification("boss", channel, guild)
 
+
 async def initialize(bot):
-    setup(bot)
-    bot.add_view(RoleView())
+    @bot.command(name="알림설정")
+    async def show_role_menu(ctx):
+        logger.info(f"!알림설정 호출됨 by {ctx.author} in {ctx.guild.name}")
+        embed = discord.Embed(
+            title="역할 알림 설정",
+            description="버튼을 눌러 알림을 켜거나 끌 수 있습니다.",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed, view=RoleView())
+
+    bot.add_view(RoleView())  # persistent view 등록
     check_schedule.bot = bot
+    check_schedule.start()
