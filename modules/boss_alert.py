@@ -24,7 +24,7 @@ class RoleView(discord.ui.View):
     @discord.ui.button(label="결계 알림", emoji="❄️", style=discord.ButtonStyle.primary, custom_id="barrier_alert")
     async def barrier_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         member = interaction.user
-        role_name = "결계"
+        role_name = "결계 알림"
         role = discord.utils.get(member.guild.roles, name=role_name)
         if not role:
             await interaction.response.send_message("❌ 역할을 찾을 수 없습니다", ephemeral=True)
