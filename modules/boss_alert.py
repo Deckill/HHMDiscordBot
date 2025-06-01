@@ -26,14 +26,6 @@ def setup(bot):
         )
         await ctx.send(embed=embed, view=RoleView())
 
-    async def handle_on_ready():
-        bot.add_view(RoleView())
-        if not check_schedule.is_running():
-            check_schedule.start()
-        logger.info("✅ boss_alert 모듈 초기화 완료")
-
-    bot.add_listener(handle_on_ready, "on_ready")
-
 class RoleView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -82,11 +74,11 @@ async def send_notification(notification_type, channel, guild):
             await channel.send(content=f"{role.mention}", embed=create_embed("보스", "🔥"))
 
 @tasks.loop(minutes=1)
-async def check_schedule():
+async def check_schedule(bot):
     logger.info("디버그 1분 송출")
     now = get_korea_time()
-    for guild in check_schedule.bot.guilds:
-        channel = check_schedule.bot.get_channel(channel_id)
+    for guild in bot.guilds:
+        channel = bot.get_channel(channel_id)
         if not channel:
             continue
         if now.endswith("0"):
@@ -95,5 +87,7 @@ async def check_schedule():
         if now in BOSS_TIMES:
             await send_notification("boss", channel, guild)
 
-# check_schedule에서 bot 사용을 위한 속성 주입
-check_schedule.bot = None
+async def initialize(bot):
+    bot.add_view(RoleView())
+    if not check_schedule.is_running():
+        check_schedule.start(bot)
