@@ -29,8 +29,8 @@ def setup(bot):
             return
 
         old_invites = invite_cache.get(guild.id, {})
-        used_code = None
 
+        used_code = None
         for invite in new_invites:
             if invite.code in old_invites and invite.uses > old_invites[invite.code]:
                 used_code = invite.code
@@ -52,6 +52,5 @@ def setup(bot):
         else:
             print(f"ℹ️ {member.name} → 알 수 없는 초대코드 사용")
 
-    # 콜백으로 등록
     bot.add_listener(handle_on_ready, "on_ready")
     bot.add_listener(handle_on_member_join, "on_member_join")
