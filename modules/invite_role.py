@@ -56,3 +56,6 @@ async def on_member_join(member):
 def setup(bot):
     bot.add_listener(on_member_join)
     bot.add_listener(on_ready)
+    
+async def initialize(bot):
+    setup(bot)
