@@ -74,8 +74,9 @@ async def send_notification(notification_type, channel, guild):
             await channel.send(content=f"{role.mention}", embed=create_embed("보스", "🔥"))
 
 @tasks.loop(minutes=1)
-async def check_schedule(bot):
+async def check_schedule():
     logger.info("디버그 1분 송출")
+    bot = check_schedule.bot
     now = get_korea_time()
     for guild in bot.guilds:
         channel = bot.get_channel(channel_id)
@@ -89,5 +90,6 @@ async def check_schedule(bot):
 
 async def initialize(bot):
     bot.add_view(RoleView())
+    check_schedule.bot = bot  # ✅ 전역 속성 설정
     if not check_schedule.is_running():
-        check_schedule.start(bot)
+        check_schedule.start()
