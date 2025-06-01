@@ -8,15 +8,19 @@ logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))
 BOSS_TIMES = ['12:00', '18:00', '20:00', '22:00']
+channel_id = 1378380187951169546
 
-channel_id = 1378380187951169546  # 실제 채널 ID로 수정 필요
-
-invite_code_to_role = {}  # 이 모듈에선 사용하지 않음
+# 모듈 전역 bot 참조용
+bot_instance = None
 
 def get_korea_time():
     return datetime.now(KST).strftime("%H:%M")
 
 def setup(bot):
+    global bot_instance
+    bot_instance = bot
+    bot.add_view(RoleView())
+
     @bot.command(name="역할설정")
     async def show_role_menu(ctx):
         embed = discord.Embed(
@@ -25,6 +29,9 @@ def setup(bot):
             color=discord.Color.green()
         )
         await ctx.send(embed=embed, view=RoleView())
+
+    if not check_schedule.is_running():
+        check_schedule.start()
 
 class RoleView(discord.ui.View):
     def __init__(self):
@@ -74,20 +81,16 @@ async def send_notification(notification_type, channel, guild):
             await channel.send(content=f"{role.mention}", embed=create_embed("보스", "🔥"))
 
 @tasks.loop(minutes=1)
-async def check_schedule(bot):
-    logger.info("디버그 1분 송출")
+async def check_schedule():
+    logger.info("⏰ 디버그 1분 송출")
     now = get_korea_time()
-    for guild in bot.guilds:
-        channel = bot.get_channel(channel_id)
+    for guild in bot_instance.guilds:
+        channel = bot_instance.get_channel(channel_id)
         if not channel:
             continue
         if now.endswith("0"):
-            logger.info("결계 알림 송출")
+            logger.info("📢 결계 알림 송출")
             await send_notification("barrier", channel, guild)
         if now in BOSS_TIMES:
+            logger.info("📢 필드 보스 알림 송출")
             await send_notification("boss", channel, guild)
-
-async def initialize(bot):
-    bot.add_view(RoleView())
-    if not check_schedule.is_running():
-        check_schedule.start(bot)
