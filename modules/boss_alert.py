@@ -105,5 +105,6 @@ async def check_schedule():
             await send_notification("boss", channel, guild)
 
 async def initialize(bot):
+    setup(bot)
     bot.add_view(RoleView())
     check_schedule.bot = bot

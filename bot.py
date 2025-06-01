@@ -26,7 +26,7 @@ async def on_ready():
 
     # 모듈 초기화
     # invite_role.setup(bot)         # 🔧 리스너 등록
-    boss_alert.setup(bot)
+    # boss_alert.setup(bot)
 
     await invite_role.initialize(bot)
     await boss_alert.initialize(bot)
