@@ -2,7 +2,10 @@ import os
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+import logging
 
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 import modules.invite_role as invite_role
 import modules.boss_alert as boss_alert
 
@@ -19,7 +22,7 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"✅ {bot.user} 봇 작동 시작!")
+    logger.info(f"✅ {bot.user} 봇 작동 시작!")
 
     # 각 모듈 초기화
     await invite_role.initialize(bot)

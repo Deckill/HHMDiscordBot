@@ -63,15 +63,28 @@ def create_embed(type_name, emoji):
         color=discord.Color.blue() if type_name == "결계" else discord.Color.red()
     ).add_field(name="시간", value=get_korea_time()).set_footer(text="마비노기 모바일")
 
+# async def send_notification(notification_type, channel, guild):
+#     if notification_type == "barrier":
+#         role = discord.utils.get(guild.roles, name="결계 알림")
+#         if role and role.members:
+#             await channel.send(content=f"{role.mention}", embed=create_embed("결계", "🌟"))
+#     elif notification_type == "boss":
+#         role = discord.utils.get(guild.roles, name="필드 보스")
+#         if role and role.members:
+#             await channel.send(content=f"{role.mention}", embed=create_embed("보스", "🔥"))
 async def send_notification(notification_type, channel, guild):
     if notification_type == "barrier":
         role = discord.utils.get(guild.roles, name="결계 알림")
-        if role and role.members:
+        if role and any(member.bot is False for member in role.members):
             await channel.send(content=f"{role.mention}", embed=create_embed("결계", "🌟"))
+        else:
+            logger.warning(f"결계 알림 역할이 없거나 유저가 없음: {guild.name}")
     elif notification_type == "boss":
         role = discord.utils.get(guild.roles, name="필드 보스")
-        if role and role.members:
+        if role and any(member.bot is False for member in role.members):
             await channel.send(content=f"{role.mention}", embed=create_embed("보스", "🔥"))
+        else:
+            logger.warning(f"보스 역할이 없거나 유저가 없음: {guild.name}")
 
 @tasks.loop(minutes=1)
 async def check_schedule():
