@@ -2,8 +2,10 @@ import discord
 from discord.ext import commands
 import os
 import logging
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+load_dotenv()
 
 # .env에서 초대 코드 불러오기
 GUILD_INVITATION = os.getenv("GUILD_INVITATION", "").strip()
