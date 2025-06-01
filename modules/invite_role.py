@@ -10,10 +10,20 @@ invite_cache = {}
 load_dotenv()
 
 def setup(bot):
-    invite_code_to_role = {
-        os.getenv("GUILD_INVITATION"): "길드원",
-        os.getenv("WORLD_INVITATION"): "손님"
-    }
+    # 환경변수 로드 및 로깅
+    guild_invite = os.getenv("GUILD_INVITATION", "").strip()
+    world_invite = os.getenv("WORLD_INVITATION", "").strip()
+
+    logger.info(f"🔍 GUILD_INVITATION = '{guild_invite}'")
+    logger.info(f"🔍 WORLD_INVITATION = '{world_invite}'")
+
+    invite_code_to_role = {}
+    if guild_invite:
+        invite_code_to_role[guild_invite] = "길드원"
+    if world_invite:
+        invite_code_to_role[world_invite] = "손님"
+
+    logger.info(f"✅ 등록된 초대 코드 목록: {invite_code_to_role}")
 
     async def handle_on_ready():
         for guild in bot.guilds:
@@ -42,6 +52,9 @@ def setup(bot):
 
         invite_cache[guild.id] = {invite.code: invite.uses for invite in new_invites}
 
+        logger.info(f"[디버그] 사용된 초대코드: {used_code}")
+        logger.info(f"[디버그] 등록된 코드: {invite_code_to_role}")
+
         if used_code and used_code in invite_code_to_role:
             role_name = invite_code_to_role[used_code]
             role = discord.utils.get(guild.roles, name=role_name)
@@ -59,6 +72,5 @@ def setup(bot):
     bot.add_listener(handle_on_ready, "on_ready")
     bot.add_listener(handle_on_member_join, "on_member_join")
 
-# 🔧 필수: bot.py 에서 await invite_role.initialize(bot) 호출 시 필요
 async def initialize(bot):
     pass
