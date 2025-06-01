@@ -17,8 +17,6 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.event
 async def on_ready():
     print(f"✅ {bot.user} 봇 작동 시작!")
-    await invite_role.initialize(bot)
-    await boss_alert.initialize(bot)
 
 # 기능 모듈 등록
 invite_role.setup(bot)
