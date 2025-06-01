@@ -20,7 +20,7 @@ def get_korea_time():
 def setup(bot):
     print("✅ [boss_alert.py] setup() 호출됨")
 
-    @bot.command(name="알림설정")
+    @bot.command(name="test")
     async def show_role_menu(ctx):
         print("✅ !알림설정 명령어 실행됨")
         embed = discord.Embed(
