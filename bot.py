@@ -4,11 +4,11 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import logging
 
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
-logger = logging.getLogger(__name__)
 import modules.invite_role as invite_role
 import modules.boss_alert as boss_alert
 
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 intents = discord.Intents.default()
@@ -27,6 +27,7 @@ async def on_ready():
     # 각 모듈 초기화
     await invite_role.initialize(bot)
     await boss_alert.initialize(bot)
+    await bot.tree.sync()
 
     # 루프 시작은 봇이 완전히 켜진 이후에만!
     if not boss_alert.check_schedule.is_running():
