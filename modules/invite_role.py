@@ -1,6 +1,7 @@
 import os
 import logging
 from discord.ext import commands
+from dotenv import load_dotenv
 import discord
 
 logger = logging.getLogger("discord")
@@ -8,6 +9,7 @@ logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)8s] %(message)s"))
 logger.addHandler(handler)
+load_dotenv()
 
 intents = discord.Intents.default()
 intents.members = True
@@ -56,6 +58,6 @@ async def on_member_join(member):
 def setup(bot):
     bot.add_listener(on_member_join)
     bot.add_listener(on_ready)
-    
+
 async def initialize(bot):
     setup(bot)
