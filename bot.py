@@ -20,6 +20,10 @@ intents.presences = False
 
 bot = commands.Bot(command_prefix="/", intents=intents)
 
+@bot.tree.command(name="테스트", description="슬래시 명령어 테스트")
+async def test_slash_command(interaction: discord.Interaction):
+    await interaction.response.send_message("✅ 슬래시 명령어 작동 중입니다!", ephemeral=True)
+
 @bot.event
 async def on_ready():
     logger.info(f"✅ {bot.user} 봇 작동 시작!")
