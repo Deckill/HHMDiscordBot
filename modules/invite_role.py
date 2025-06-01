@@ -11,8 +11,7 @@ def setup(bot):
         os.getenv("WORLD_INVITATION"): "손님"
     }
 
-    @bot.event
-    async def on_ready():
+    async def handle_on_ready():
         for guild in bot.guilds:
             try:
                 invites = await guild.invites()
@@ -20,8 +19,7 @@ def setup(bot):
             except discord.Forbidden:
                 print(f"⚠️ 초대 링크 권한 없음: {guild.name}")
 
-    @bot.event
-    async def on_member_join(member):
+    async def handle_on_member_join(member):
         await asyncio.sleep(2)
         guild = member.guild
         try:
@@ -31,8 +29,8 @@ def setup(bot):
             return
 
         old_invites = invite_cache.get(guild.id, {})
-
         used_code = None
+
         for invite in new_invites:
             if invite.code in old_invites and invite.uses > old_invites[invite.code]:
                 used_code = invite.code
@@ -53,3 +51,7 @@ def setup(bot):
                 print(f"⚠️ {role_name} 역할을 찾을 수 없거나 위치가 문제")
         else:
             print(f"ℹ️ {member.name} → 알 수 없는 초대코드 사용")
+
+    # 콜백으로 등록
+    bot.add_listener(handle_on_ready, "on_ready")
+    bot.add_listener(handle_on_member_join, "on_member_join")

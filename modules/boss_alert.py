@@ -71,12 +71,14 @@ async def send_notification(notification_type, channel, guild):
 
 @tasks.loop(minutes=1)
 async def check_schedule(bot):
+    print("디버그 1분 송출")
     now = get_korea_time()
     for guild in bot.guilds:
         channel = bot.get_channel(channel_id)
         if not channel:
             continue
         if now.endswith(":00"):
+            print("결계 알림 송출")
             await send_notification("barrier", channel, guild)
         if now in BOSS_TIMES:
             await send_notification("boss", channel, guild)
