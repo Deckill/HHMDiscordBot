@@ -1,6 +1,10 @@
 import discord
 from discord.ext import tasks, commands
 from datetime import datetime, timedelta, timezone
+import logging
+
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))
 BOSS_TIMES = ['12:00', '18:00', '20:00', '22:00']
@@ -71,14 +75,14 @@ async def send_notification(notification_type, channel, guild):
 
 @tasks.loop(minutes=1)
 async def check_schedule(bot):
-    print("디버그 1분 송출")
+    logger.info("디버그 1분 송출")
     now = get_korea_time()
     for guild in bot.guilds:
         channel = bot.get_channel(channel_id)
         if not channel:
             continue
         if now.endswith(":00"):
-            print("결계 알림 송출")
+            logger.info("결계 알림 송출")
             await send_notification("barrier", channel, guild)
         if now in BOSS_TIMES:
             await send_notification("boss", channel, guild)

@@ -4,6 +4,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from modules import invite_role, boss_alert
+import logging
 
 load_dotenv()
 
@@ -14,9 +15,11 @@ intents.guilds = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 @bot.event
 async def on_ready():
-    print(f"✅ {bot.user} 봇 작동 시작!")
+    logger.info(f"✅ {bot.user} 봇 작동 시작!")
 
 # 기능 모듈 등록
 invite_role.setup(bot)
