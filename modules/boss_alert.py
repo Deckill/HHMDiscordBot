@@ -18,10 +18,10 @@ def get_korea_time():
     return datetime.now(KST).strftime("%H:%M")
 
 def setup(bot):
-    @bot.command(name="역할설정")
+    @bot.command(name="알림설정")
     async def show_role_menu(ctx):
         embed = discord.Embed(
-            title="역할 알림 설정",
+            title="알림 설정",
             description="버튼을 눌러 알림을 켜거나 끌 수 있습니다.",
             color=discord.Color.green()
         )
