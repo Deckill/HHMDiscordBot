@@ -5,6 +5,7 @@ import logging
 
 import modules.invite_role as invite_role
 import modules.boss_alert as boss_alert
+import modules.equipment_upgrade as equipment_upgrade
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ async def on_ready():
 
     await invite_role.initialize(bot)
     await boss_alert.initialize(bot)
+    await equipment_upgrade.initialize(bot)
 
     logger.info("🌐 모든 모듈 초기화 완료")
 
