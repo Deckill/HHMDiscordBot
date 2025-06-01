@@ -16,12 +16,17 @@ intents.members = True
 intents.message_content = True
 intents.guilds = True
 intents.invites = True
+intents.presences = False
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
     logger.info(f"✅ {bot.user} 봇 작동 시작!")
+
+    # 모듈 초기화
+    invite_role.setup(bot)         # 🔧 리스너 등록
+    boss_alert.setup(bot)
 
     await invite_role.initialize(bot)
     await boss_alert.initialize(bot)
@@ -31,7 +36,7 @@ async def on_ready():
 
 if __name__ == "__main__":
     token = os.getenv("DISCORD_TOKEN")
-    if not token:
-        logger.error("❌ DISCORD_TOKEN이 설정되지 않았습니다.")
+    if token is None:
+        logger.error("❌ DISCORD_TOKEN이 .env에 정의되어 있지 않습니다.")
     else:
         bot.run(token)
