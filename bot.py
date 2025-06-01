@@ -3,26 +3,31 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from modules import invite_role, boss_alert
-import logging
+import modules.invite_role as invite_role
+import modules.boss_alert as boss_alert
 
 load_dotenv()
 
 intents = discord.Intents.default()
-intents.message_content = True
 intents.members = True
+intents.message_content = True
 intents.guilds = True
+intents.invites = True
+intents.presences = False
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix="/", intents=intents)
 
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
-logger = logging.getLogger(__name__)
 @bot.event
 async def on_ready():
-    logger.info(f"✅ {bot.user} 봇 작동 시작!")
+    print(f"✅ {bot.user} 봇 작동 시작!")
 
-# 기능 모듈 등록
-invite_role.setup(bot)
-boss_alert.setup(bot)
+    # 각 모듈 초기화
+    await invite_role.initialize(bot)
+    await boss_alert.initialize(bot)
 
-bot.run(os.getenv("DISCORD_TOKEN"))
+    # 루프 시작은 봇이 완전히 켜진 이후에만!
+    if not boss_alert.check_schedule.is_running():
+        boss_alert.check_schedule.start()
+
+if __name__ == "__main__":
+    bot.run(os.getenv("DISCORD_TOKEN"))

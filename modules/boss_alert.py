@@ -75,7 +75,7 @@ async def send_notification(notification_type, channel, guild):
 
 @tasks.loop(minutes=1)
 async def check_schedule():
-    logger.info("디버그 1분 송출")
+    logger.info("⏰ 1분마다 실행 중")
     bot = check_schedule.bot
     now = get_korea_time()
     for guild in bot.guilds:
@@ -83,13 +83,12 @@ async def check_schedule():
         if not channel:
             continue
         if now.endswith("0"):
-            logger.info("결계 알림 송출")
+            logger.info("🔔 결계 알림 송출")
             await send_notification("barrier", channel, guild)
         if now in BOSS_TIMES:
             await send_notification("boss", channel, guild)
 
 async def initialize(bot):
     bot.add_view(RoleView())
-    check_schedule.bot = bot  # ✅ 전역 속성 설정
-    if not check_schedule.is_running():
-        check_schedule.start()
+    check_schedule.bot = bot
+    # 루프 시작은 bot.py 의 on_ready 에서 수행
