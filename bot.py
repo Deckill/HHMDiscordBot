@@ -1,3 +1,4 @@
+# bot.py
 import os
 import discord
 from discord.ext import commands
@@ -16,24 +17,31 @@ intents.members = True
 intents.message_content = True
 intents.guilds = True
 intents.invites = True
-intents.presences = False
 
-bot = commands.Bot(command_prefix="/", intents=intents)
+# ✅ 슬래시 명령어 등록 가능한 봇 클래스
+class MyBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="/", intents=intents)
+        self.synced = False  # 중복 sync 방지
 
-@bot.tree.command(name="테스트", description="슬래시 명령어 테스트")
-async def test_slash_command(interaction: discord.Interaction):
-    await interaction.response.send_message("✅ 슬래시 명령어 작동 중입니다!", ephemeral=True)
+    async def setup_hook(self):
+        await invite_role.initialize(self)
+        await boss_alert.initialize(self)
+
+        if not self.synced:
+            await self.tree.sync()  # ✅ 슬래시 명령어 전체 동기화
+            self.synced = True
+
+bot = MyBot()
+
+# 테스트용 슬래시 명령어
+@bot.tree.command(name="테스트", description="슬래시 명령어 작동 확인")
+async def test(interaction: discord.Interaction):
+    await interaction.response.send_message("✅ 슬래시 명령어 성공!", ephemeral=True)
 
 @bot.event
 async def on_ready():
     logger.info(f"✅ {bot.user} 봇 작동 시작!")
-
-    # 각 모듈 초기화
-    await invite_role.initialize(bot)
-    await boss_alert.initialize(bot)
-    await bot.tree.sync(guild=discord.Object(id=1375766625164202104))
-
-    # 루프 시작은 봇이 완전히 켜진 이후에만!
     if not boss_alert.check_schedule.is_running():
         boss_alert.check_schedule.start()
     for cmd in bot.tree.walk_commands():
