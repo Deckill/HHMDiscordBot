@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 KST = timezone(timedelta(hours=9))
 BOSS_TIMES = ['12:00', '18:00', '20:00', '22:00']
 
+TARGET_GUILD_ID = 1375766625164202104  # 실제 알림을 보낼 서버 ID로 변경
 channel_id = 1378380187951169546  # 실제 채널 ID로 수정 필요
 
 invite_code_to_role = {}  # 이 모듈에선 사용하지 않음
@@ -63,15 +64,6 @@ def create_embed(type_name, emoji):
         color=discord.Color.blue() if type_name == "결계" else discord.Color.red()
     ).add_field(name="시간", value=get_korea_time()).set_footer(text="마비노기 모바일")
 
-# async def send_notification(notification_type, channel, guild):
-#     if notification_type == "barrier":
-#         role = discord.utils.get(guild.roles, name="결계 알림")
-#         if role and role.members:
-#             await channel.send(content=f"{role.mention}", embed=create_embed("결계", "🌟"))
-#     elif notification_type == "boss":
-#         role = discord.utils.get(guild.roles, name="필드 보스")
-#         if role and role.members:
-#             await channel.send(content=f"{role.mention}", embed=create_embed("보스", "🔥"))
 async def send_notification(notification_type, channel, guild):
     if notification_type == "barrier":
         role = discord.utils.get(guild.roles, name="결계 알림")
@@ -86,20 +78,38 @@ async def send_notification(notification_type, channel, guild):
         else:
             logger.warning(f"보스 역할이 없거나 유저가 없음: {guild.name}")
 
+# @tasks.loop(minutes=1)
+# async def check_schedule():
+#     logger.info("⏰ 1분마다 실행 중")
+#     bot = check_schedule.bot
+#     now = get_korea_time()
+#     for guild in bot.guilds:
+#         channel = bot.get_channel(channel_id)
+#         if not channel:
+#             continue
+#         if now.endswith("0"):
+#             logger.info("🔔 결계 알림 송출")
+#             await send_notification("barrier", channel, guild)
+#         if now in BOSS_TIMES:
+#             await send_notification("boss", channel, guild)
+
 @tasks.loop(minutes=1)
 async def check_schedule():
-    logger.info("⏰ 1분마다 실행 중")
+    logger.info("디버그 1분 송출")
     bot = check_schedule.bot
     now = get_korea_time()
     for guild in bot.guilds:
+        if guild.id != TARGET_GUILD_ID:
+            continue  # 디버깅용 서버는 무시
         channel = bot.get_channel(channel_id)
         if not channel:
             continue
         if now.endswith("0"):
-            logger.info("🔔 결계 알림 송출")
+            logger.info("결계 알림 송출")
             await send_notification("barrier", channel, guild)
         if now in BOSS_TIMES:
             await send_notification("boss", channel, guild)
+
 
 async def initialize(bot):
     bot.add_view(RoleView())
