@@ -1,74 +1,66 @@
-import os
 import discord
+import asyncio
+import os
 import logging
-from discord.ext import commands
 from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
 load_dotenv()
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 
 invite_cache = {}
 
-# 환경변수에서 초대코드 → 역할 이름 매핑 생성
-def get_invite_code_mapping():
-    mapping = {}
-    guild_invite = os.getenv("GUILD_INVITATION", "").strip().replace('"', '')
-    world_invite = os.getenv("WORLD_INVITATION", "").strip().replace('"', '')
+# 환경변수에서 초대 코드 → 역할 매핑 로딩
+invite_code_to_role = {
+    os.getenv("GUILD_INVITATION"): "길드원",
+    os.getenv("WORLD_INVITATION"): "손님"
+}
 
-    if guild_invite:
-        mapping[guild_invite] = "길드원"
-    if world_invite:
-        mapping[world_invite] = "손님"
-
-    return mapping
-
-invite_code_to_role = get_invite_code_mapping()
-
-def setup(bot):
-    @bot.event
-    async def on_ready():
-        logger.info("🔄 초대 캐시 초기화 중...")
-        for guild in bot.guilds:
-            try:
-                invites = await guild.invites()
-                invite_cache[guild.id] = invites
-                logger.info(f"✅ {guild.name}({guild.id}) - {len(invites)}개 초대코드 캐시 완료")
-            except Exception as e:
-                logger.warning(f"⚠️ {guild.name}({guild.id}) - 초대코드 캐시 실패: {e}")
-
-    @bot.event
-    async def on_member_join(member):
-        guild = member.guild
+async def on_ready(bot):
+    for guild in bot.guilds:
         try:
-            new_invites = await guild.invites()
-            old_invites = invite_cache.get(guild.id, [])
+            invites = await guild.invites()
+            invite_cache[guild.id] = {invite.code: invite.uses for invite in invites}
+            logger.info(f"✅ [{guild.name}] 초대코드 캐시 초기화 완료")
+        except discord.Forbidden:
+            logger.warning(f"⚠️ [{guild.name}] 초대 링크 권한 없음")
 
-            old_invite_map = {invite.code: invite.uses for invite in old_invites}
-            used_code = None
+async def on_member_join(member):
+    await asyncio.sleep(2)  # 초대 수 반영 대기
+    guild = member.guild
+    try:
+        new_invites = await guild.invites()
+    except discord.Forbidden:
+        logger.warning(f"⚠️ [{guild.name}] 초대 링크 조회 권한 없음")
+        return
 
-            logger.info("[디버그] 초대코드 후보:")
-            for invite in new_invites:
-                old_uses = old_invite_map.get(invite.code, 0)
-                logger.info(f"[디버그] {invite.code} - 이전: {old_uses}, 현재: {invite.uses}")
-                if invite.uses > old_uses:
-                    used_code = invite.code
-                    break
+    old_invites = invite_cache.get(guild.id, {})
+    used_code = None
+    for invite in new_invites:
+        if invite.code in old_invites and invite.uses > old_invites[invite.code]:
+            used_code = invite.code
+            break
 
-            logger.info(f"[디버그] 사용된 초대코드: {used_code}")
-            logger.info(f"[디버그] 등록된 코드: {invite_code_to_role}")
+    invite_cache[guild.id] = {invite.code: invite.uses for invite in new_invites}
 
-            if used_code and used_code in invite_code_to_role:
-                role_name = invite_code_to_role[used_code]
-                role = discord.utils.get(guild.roles, name=role_name)
-                if role:
-                    await member.add_roles(role)
-                    logger.info(f"✅ {member.name} → 역할 '{role_name}' 부여")
-                else:
-                    logger.warning(f"⚠️ 역할 '{role_name}'을(를) 찾을 수 없음")
-            else:
-                logger.info(f"ℹ️ {member.name} → 알 수 없는 초대코드 사용")
+    logger.info(f"[디버그] 사용된 초대코드: {used_code}")
+    logger.info(f"[디버그] 등록된 코드: {invite_code_to_role}")
 
-            invite_cache[guild.id] = new_invites
+    if used_code and used_code in invite_code_to_role:
+        role_name = invite_code_to_role[used_code]
+        role = discord.utils.get(guild.roles, name=role_name)
+        if role and guild.me.top_role > role:
+            try:
+                await member.add_roles(role)
+                logger.info(f"✅ {member.name} → '{role_name}' 역할 부여 완료")
+            except discord.Forbidden:
+                logger.warning(f"⚠️ {role_name} 역할 부여 실패 (권한 부족)")
+        else:
+            logger.warning(f"⚠️ {role_name} 역할을 찾을 수 없거나 봇보다 상위 역할임")
+    else:
+        logger.info(f"ℹ️ {member.name} → 알 수 없는 초대코드 사용")
 
-        except Exception as e:
-            logger.error(f"❌ on_member_join 오류: {e}")
+# bot.py에서 호출되는 초기화 함수
+async def initialize(bot):
+    bot.add_listener(lambda *_: on_ready(bot), "on_ready")
+    bot.add_listener(on_member_join, "on_member_join")
