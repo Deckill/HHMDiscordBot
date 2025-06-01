@@ -81,7 +81,7 @@ async def check_schedule(bot):
         channel = bot.get_channel(channel_id)
         if not channel:
             continue
-        if now.endswith(":00"):
+        if now.endswith("0"):
             logger.info("결계 알림 송출")
             await send_notification("barrier", channel, guild)
         if now in BOSS_TIMES:
