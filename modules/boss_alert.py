@@ -30,21 +30,29 @@ class RoleView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="결계 알림", style=discord.ButtonStyle.primary, custom_id="barrier_role", emoji="❄️")
+    @discord.ui.button(label="결계 알림", emoji="❄️", style=discord.ButtonStyle.primary)
     async def barrier_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        role_name = "결계 알림"
-        role = discord.utils.get(interaction.guild.roles, name=role_name)
+        member = interaction.user
+        role_name = "결계"
+
+        role = discord.utils.get(member.guild.roles, name=role_name)
         if not role:
-            role = await interaction.guild.create_role(name=role_name, color=discord.Color.blue())
-            logger.info(f"역할 생성됨: {role_name}")
-        if role in interaction.user.roles:
-            await interaction.user.remove_roles(role)
-            await interaction.response.send_message(f"{role_name} 제거됨", ephemeral=True)
-            logger.info(f"{interaction.user}에게서 {role_name} 제거됨")
+            await interaction.response.send_message("❌ 역할을 찾을 수 없습니다", ephemeral=True)
+            return
+
+        if role in member.roles:
+            await member.remove_roles(role)
+            try:
+                await interaction.response.send_message(f"{role_name} 제거됨", ephemeral=True)
+            except discord.NotFound:
+                await interaction.followup.send(f"{role_name} 제거됨 (followup)", ephemeral=True)
         else:
-            await interaction.user.add_roles(role)
-            await interaction.response.send_message(f"{role_name} 추가됨", ephemeral=True)
-            logger.info(f"{interaction.user}에게 {role_name} 추가됨")
+            await member.add_roles(role)
+            try:
+                await interaction.response.send_message(f"{role_name} 부여됨", ephemeral=True)
+            except discord.NotFound:
+                await interaction.followup.send(f"{role_name} 부여됨 (followup)", ephemeral=True)
+
 
     @discord.ui.button(label="필드 보스", style=discord.ButtonStyle.danger, custom_id="boss_role", emoji="🔥")
     async def boss_button(self, interaction: discord.Interaction, button: discord.ui.Button):
