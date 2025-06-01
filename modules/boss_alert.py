@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(me
 logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))
-BOSS_TIMES = ['12:00', '18:00', '20:00', '22:00']
+BOSS_TIMES = ['11:59', '17:59', '19:59', '21:59']
 
 TARGET_GUILD_ID = 1375766625164202104
 channel_id = 1378380187951169546
