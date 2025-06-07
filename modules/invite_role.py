@@ -52,6 +52,12 @@ async def initialize(bot: commands.Bot):
             role_name = invite_code_to_role.get(used_code)
             if not role_name:
                 logger.info(f"ℹ️ {member.name} → 알 수 없는 초대코드 사용")
+                role = discord.utils.get(member.guild.roles, name="손님")
+                if role:
+                    await member.add_roles(role)
+                    logger.info(f"🎉 {member.name} → 역할 '{role_name}' 부여됨")
+                else:
+                    logger.warning(f"⚠️ 역할 '{role_name}' 이(가) 서버에 없음")
                 return
 
             role = discord.utils.get(member.guild.roles, name=role_name)
