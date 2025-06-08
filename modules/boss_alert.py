@@ -1,140 +1,105 @@
 import discord
 from discord.ext import tasks
-from discord import app_commands
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime
-import json
-import os
+from datetime import datetime, timedelta, timezone
+import logging
 
-EVENT_URL = "https://mabinogimobile.nexon.com/News/Events"
-EVENT_CHANNEL_ID = 1381299937618296902
-ALERT_ROLE_NAME = "이벤트 알림"
-CACHE_FILE = "event_cache.json"
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 
-def load_event_cache():
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+KST = timezone(timedelta(hours=9))
+BOSS_TIMES = ['11:59', '17:59', '19:59', '21:59']
 
-def save_event_cache(cache):
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(cache, f, ensure_ascii=False, indent=2)
+TARGET_GUILD_ID = 1375766625164202104
+channel_id = 1378380187951169546
 
-def parse_events():
-    res = requests.get(EVENT_URL)
-    soup = BeautifulSoup(res.text, "html.parser")
+def get_korea_time():
+    return datetime.now(KST).strftime("%H:%M")
 
-    events = []
-    items = soup.select(".item-list li")
-
-    for item in items:
-        thread_id = item.get("data-threadid", "").strip()
-        if not thread_id:
-            continue
-
-        title_tag = item.select_one(".title span")
-        date_tag = item.select_one(".date span")
-
-        if not (title_tag and date_tag):
-            continue
-
-        title = title_tag.text.strip()
-        date_text = date_tag.text.strip()
-        link = f"https://mabinogimobile.nexon.com/News/Events?headlineId={thread_id}"
-
-        try:
-            if "~" in date_text:
-                end_raw = date_text.split("~")[1]
-                end_date_str = end_raw.split("까지")[0].split("(")[0].strip()
-                end_date = datetime.strptime(end_date_str, "%Y.%m.%d").date()
-            else:
-                end_date = datetime(2999, 12, 31).date()
-        except:
-            end_date = datetime(2999, 12, 31).date()
-
-        events.append({
-            "id": thread_id,
-            "title": title,
-            "link": link,
-            "end_date": end_date
-        })
-
-    return events
-
-class EventRoleView(discord.ui.View):
+class RoleView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="이벤트 알림 받기", style=discord.ButtonStyle.primary)
-    async def give_role(self, button, interaction: discord.Interaction):
-        role = discord.utils.get(interaction.guild.roles, name=ALERT_ROLE_NAME)
+    @discord.ui.button(label="결계 알림", emoji="❄️", style=discord.ButtonStyle.primary, custom_id="barrier_alert")
+    async def barrier_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        member = interaction.user
+        role_name = "결계 알림"
+        role = discord.utils.get(member.guild.roles, name=role_name)
         if not role:
             await interaction.response.send_message("❌ 역할을 찾을 수 없습니다", ephemeral=True)
             return
 
+        if role in member.roles:
+            await member.remove_roles(role)
+            await interaction.response.send_message(f"{role_name} 제거됨", ephemeral=True)
+        else:
+            await member.add_roles(role)
+            await interaction.response.send_message(f"{role_name} 부여됨", ephemeral=True)
+
+    @discord.ui.button(label="필드 보스", style=discord.ButtonStyle.danger, emoji="🔥", custom_id="boss_alert")
+    async def boss_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role_name = "필드 보스"
+        role = discord.utils.get(interaction.guild.roles, name=role_name)
+        if not role:
+            role = await interaction.guild.create_role(name=role_name, color=discord.Color.red())
+            logger.info(f"역할 생성됨: {role_name}")
+
         if role in interaction.user.roles:
             await interaction.user.remove_roles(role)
-            await interaction.response.send_message("이벤트 알림 역할을 제거했어요.", ephemeral=True)
+            await interaction.response.send_message(f"{role_name} 제거됨", ephemeral=True)
         else:
             await interaction.user.add_roles(role)
-            await interaction.response.send_message("이벤트 알림 역할을 부여했어요!", ephemeral=True)
+            await interaction.response.send_message(f"{role_name} 추가됨", ephemeral=True)
 
-event_cache = {}
+def create_embed(type_name, emoji):
+    return discord.Embed(
+        title=f"{emoji} {type_name} 알림",
+        description=f"{type_name}가 시작되었습니다!",
+        color=discord.Color.blue() if type_name == "결계" else discord.Color.red()
+    ).add_field(name="시간", value=get_korea_time()).set_footer(text="마비노기 모바일")
 
-@tasks.loop(minutes=60)
-async def check_event_updates():
-    await check_event_updates.bot.wait_until_ready()
-    channel = check_event_updates.bot.get_channel(EVENT_CHANNEL_ID)
-    if not channel:
-        return
+async def send_notification(notification_type, channel, guild):
+    if notification_type == "barrier":
+        role = discord.utils.get(guild.roles, name="결계 알림")
+        if role and any(not member.bot for member in role.members):
+            await channel.send(content=f"{role.mention}", embed=create_embed("결계", "🌟"))
+            logger.info("결계 알림 송신됨")
+    elif notification_type == "boss":
+        role = discord.utils.get(guild.roles, name="필드 보스")
+        if role and any(not member.bot for member in role.members):
+            await channel.send(content=f"{role.mention}", embed=create_embed("보스", "🔥"))
+            logger.info("보스 알림 송신됨")
 
-    today = datetime.now().date()
-    parsed = parse_events()
-    updated_cache = {}
-
-    for event in parsed:
-        eid = event["id"]
-        title = event["title"]
-        link = event["link"]
-        end_date = event["end_date"]
-
-        updated_cache[eid] = {
-            "title": title,
-            "end_date": end_date.isoformat()
-        }
-
-        if eid not in event_cache:
-            role = discord.utils.get(channel.guild.roles, name=ALERT_ROLE_NAME)
-            mention = role.mention if role else "@everyone"
-            await channel.send(f"{mention}\n📢 새로운 이벤트가 등록되었습니다!\n**{title}**\n🔗 {link}")
-
-        elif event_cache[eid]["end_date"] != "2999-12-31":
-            cached_end = datetime.strptime(event_cache[eid]["end_date"], "%Y-%m-%d").date()
-            if (cached_end - today).days == 1:
-                role = discord.utils.get(channel.guild.roles, name=ALERT_ROLE_NAME)
-                mention = role.mention if role else "@everyone"
-                await channel.send(f"{mention}\n⏰ **{title}** 이벤트가 내일 종료됩니다!\n🔗 {link}")
-
-    global event_cache
-    event_cache = updated_cache
-    save_event_cache(event_cache)
+@tasks.loop(minutes=1)
+async def check_schedule():
+    now = get_korea_time()
+    bot = check_schedule.bot
+    logger.info(f"⏰ 지금 시간: {now}")
+    for guild in bot.guilds:
+        if guild.id != TARGET_GUILD_ID:
+            continue
+        channel = bot.get_channel(channel_id)
+        if not channel:
+            continue
+        if now.endswith(":59"):
+            await send_notification("barrier", channel, guild)
+        if now in BOSS_TIMES:
+            await send_notification("boss", channel, guild)
 
 async def initialize(bot: discord.Client):
-    @bot.tree.command(name="이벤트알림설정", description="이벤트 알림 역할을 선택할 수 있는 메시지를 보냅니다.")
-    async def 이벤트알림설정(interaction: discord.Interaction):
-        role = discord.utils.get(interaction.guild.roles, name=ALERT_ROLE_NAME)
-        if not role:
-            await interaction.response.send_message("❌ '이벤트 알림' 역할이 서버에 없습니다. 먼저 역할을 생성해주세요.", ephemeral=True)
-            return
+    @bot.tree.command(name="알림설정", description="알림 여행을 설정합니다.")
+    async def 알림설정(interaction: discord.Interaction):
+        logger.info(f"/알림설정 호출됨 by {interaction.user} in {interaction.guild.name}")
+        embed = discord.Embed(
+            title="역할 알림 설정",
+            description="버튼을 눌러 알림을 켜거나 끌 수 있습니다.",
+            color=discord.Color.green()
+        )
+        await interaction.response.send_message(embed=embed, view=RoleView(), ephemeral=False)
 
-        await interaction.response.send_message("이벤트 알림 역할을 설정하세요!", view=EventRoleView(), ephemeral=False)
+    bot.add_view(RoleView())
+    check_schedule.bot = bot
+    if not check_schedule.is_running():
+        check_schedule.start()
 
-    bot.add_view(EventRoleView())
-    check_event_updates.bot = bot
-    global event_cache
-    event_cache = load_event_cache()
-
-    if not check_event_updates.is_running():
-        check_event_updates.start()
+    # await bot.tree.sync()
+    # logger.info("✅ 슬래시 명령어 /알림설정 동기화 완료")
