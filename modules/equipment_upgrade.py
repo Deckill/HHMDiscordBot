@@ -73,5 +73,5 @@ async def initialize(bot: discord.Client):
         )
         await interaction.response.send_message(message)
 
-    await bot.tree.sync()
-    logger.info("✅ /각인강화 및 /룬승급 명령어 동기화 완료")
+    # await bot.tree.sync()
+    # logger.info("✅ /각인강화 및 /룬승급 명령어 동기화 완료")

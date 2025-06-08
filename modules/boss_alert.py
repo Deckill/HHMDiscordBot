@@ -101,5 +101,5 @@ async def initialize(bot: discord.Client):
     if not check_schedule.is_running():
         check_schedule.start()
 
-    await bot.tree.sync()
-    logger.info("✅ 슬래시 명령어 /알림설정 동기화 완료")
+    # await bot.tree.sync()
+    # logger.info("✅ 슬래시 명령어 /알림설정 동기화 완료")
