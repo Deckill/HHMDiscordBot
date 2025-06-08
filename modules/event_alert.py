@@ -65,12 +65,16 @@ def parse_events():
 
     return events
 
-# 역할 버튼 View
+# ✅ persistent view용 custom_id 포함
 class EventRoleView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="이벤트 알림 받기", style=discord.ButtonStyle.primary)
+    @discord.ui.button(
+        label="이벤트 알림 받기",
+        style=discord.ButtonStyle.primary,
+        custom_id="event_alert:subscribe"
+    )
     async def give_role(self, button, interaction: discord.Interaction):
         role = discord.utils.get(interaction.guild.roles, name=ALERT_ROLE_NAME)
         if not role:
@@ -84,13 +88,29 @@ class EventRoleView(discord.ui.View):
             await interaction.user.add_roles(role)
             await interaction.response.send_message("이벤트 알림 역할을 부여했어요!", ephemeral=True)
 
+    @discord.ui.button(
+        label="알림 그만 받기",
+        style=discord.ButtonStyle.secondary,
+        custom_id="event_alert:unsubscribe"
+    )
+    async def remove_role(self, button, interaction: discord.Interaction):
+        role = discord.utils.get(interaction.guild.roles, name=ALERT_ROLE_NAME)
+        if not role:
+            await interaction.response.send_message("❌ 역할을 찾을 수 없습니다", ephemeral=True)
+            return
+
+        if role in interaction.user.roles:
+            await interaction.user.remove_roles(role)
+            await interaction.response.send_message("이벤트 알림 역할을 제거했어요.", ephemeral=True)
+        else:
+            await interaction.response.send_message("역할이 없습니다.", ephemeral=True)
+
 # 이벤트 감시 태스크
 event_cache = {}
 
 @tasks.loop(minutes=60)
 async def check_event_loop():
-    global event_cache  # ✅ 전역 선언은 최상단에 위치해야 함
-
+    global event_cache
     await check_event_loop.bot.wait_until_ready()
     channel = check_event_loop.bot.get_channel(EVENT_CHANNEL_ID)
     if not channel:
@@ -126,7 +146,7 @@ async def check_event_loop():
     event_cache = updated_cache
     save_event_cache(event_cache)
 
-# ✅ 여기가 꼭 필요했던 initialize(bot)
+# ✅ initialize() 포함
 async def initialize(bot: discord.Client):
     @bot.tree.command(name="이벤트알림설정", description="이벤트 알림 역할을 선택할 수 있는 메시지를 보냅니다.")
     async def 이벤트알림설정(interaction: discord.Interaction):
@@ -137,10 +157,10 @@ async def initialize(bot: discord.Client):
 
         await interaction.response.send_message("이벤트 알림 역할을 설정하세요!", view=EventRoleView(), ephemeral=False)
 
-    bot.add_view(EventRoleView())
-    check_event_updates.bot = bot
+    bot.add_view(EventRoleView())  # persistent view 등록
+    check_event_loop.bot = bot
     global event_cache
     event_cache = load_event_cache()
 
-    if not check_event_updates.is_running():
-        check_event_updates.start()
+    if not check_event_loop.is_running():
+        check_event_loop.start()
