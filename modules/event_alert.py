@@ -12,7 +12,6 @@ EVENT_CHANNEL_ID = 1381299937618296902
 ALERT_ROLE_NAME = "이벤트 알림"
 CACHE_FILE = "event_cache.json"
 
-# 캐시 로딩 및 저장
 def load_event_cache():
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, "r", encoding="utf-8") as f:
@@ -23,7 +22,6 @@ def save_event_cache(cache):
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
-# 이벤트 크롤링
 def parse_events():
     res = requests.get(EVENT_URL)
     soup = BeautifulSoup(res.text, "html.parser")
@@ -65,7 +63,7 @@ def parse_events():
 
     return events
 
-# ✅ persistent view용 custom_id 포함
+# Persistent view 역할 버튼
 class EventRoleView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -105,7 +103,7 @@ class EventRoleView(discord.ui.View):
         else:
             await interaction.response.send_message("역할이 없습니다.", ephemeral=True)
 
-# 이벤트 감시 태스크
+# 전역 캐시
 event_cache = {}
 
 @tasks.loop(minutes=60)
@@ -146,7 +144,7 @@ async def check_event_loop():
     event_cache = updated_cache
     save_event_cache(event_cache)
 
-# ✅ initialize() 포함
+# ✅ initialize(bot)
 async def initialize(bot: discord.Client):
     @bot.tree.command(name="이벤트알림설정", description="이벤트 알림 역할을 선택할 수 있는 메시지를 보냅니다.")
     async def 이벤트알림설정(interaction: discord.Interaction):
@@ -154,13 +152,40 @@ async def initialize(bot: discord.Client):
         if not role:
             await interaction.response.send_message("❌ '이벤트 알림' 역할이 서버에 없습니다. 먼저 역할을 생성해주세요.", ephemeral=True)
             return
-
         await interaction.response.send_message("이벤트 알림 역할을 설정하세요!", view=EventRoleView(), ephemeral=False)
 
-    bot.add_view(EventRoleView())  # persistent view 등록
+    @bot.tree.command(name="이벤트", description="현재 진행 중인 이벤트 목록을 확인합니다.")
+    async def 이벤트(interaction: discord.Interaction):
+        today = datetime.now().date()
+        active_events = []
+        for eid, data in event_cache.items():
+            try:
+                end_date = datetime.strptime(data["end_date"], "%Y-%m-%d").date()
+                if end_date >= today:
+                    link = f"https://mabinogimobile.nexon.com/News/Events?headlineId={eid}"
+                    active_events.append(f"• [{data['title']}]({link}) ~ `{end_date}`")
+            except:
+                continue
+
+        if not active_events:
+            await interaction.response.send_message("📭 현재 진행 중인 이벤트가 없습니다.", ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title="📅 진행 중인 이벤트 목록",
+            description="\n".join(active_events),
+            color=discord.Color.gold()
+        )
+        embed.set_footer(text="마비노기 모바일 이벤트")
+        await interaction.response.send_message(embed=embed, ephemeral=False)
+
+    # View, 캐시, 태스크 등록
+    bot.add_view(EventRoleView())  # ✅ persistent view
     check_event_loop.bot = bot
+
     global event_cache
     event_cache = load_event_cache()
 
     if not check_event_loop.is_running():
         check_event_loop.start()
+
