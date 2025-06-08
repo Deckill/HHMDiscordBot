@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import tasks
 from discord import app_commands
 import requests
 from bs4 import BeautifulSoup
@@ -12,6 +12,7 @@ EVENT_CHANNEL_ID = 1381299937618296902
 ALERT_ROLE_NAME = "이벤트 알림"
 CACHE_FILE = "event_cache.json"
 
+# 캐시 로딩 및 저장
 def load_event_cache():
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, "r", encoding="utf-8") as f:
@@ -22,6 +23,7 @@ def save_event_cache(cache):
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
+# 이벤트 크롤링
 def parse_events():
     res = requests.get(EVENT_URL)
     soup = BeautifulSoup(res.text, "html.parser")
@@ -42,7 +44,6 @@ def parse_events():
 
         title = title_tag.text.strip()
         date_text = date_tag.text.strip()
-
         link = f"https://mabinogimobile.nexon.com/News/Events?headlineId={thread_id}"
 
         try:
@@ -64,77 +65,81 @@ def parse_events():
 
     return events
 
-class EventAlert(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-        self.known_events = load_event_cache()
-        self.check_events.start()
+# 역할 버튼 View
+class EventRoleView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
 
-    def cog_unload(self):
-        self.check_events.cancel()
-
-    @tasks.loop(minutes=60)
-    async def check_events(self):
-        await self.bot.wait_until_ready()
-        channel = self.bot.get_channel(EVENT_CHANNEL_ID)
-        if not channel:
-            return
-
-        events = parse_events()
-        today = datetime.now().date()
-        updated_cache = {}
-
-        for event in events:
-            eid = event["id"]
-            title = event["title"]
-            link = event["link"]
-            end_date = event["end_date"]
-
-            updated_cache[eid] = {
-                "title": title,
-                "end_date": end_date.isoformat()
-            }
-
-            if eid not in self.known_events:
-                role = discord.utils.get(channel.guild.roles, name=ALERT_ROLE_NAME)
-                mention = role.mention if role else "@everyone"
-                await channel.send(f"{mention}\n📢 새로운 이벤트가 등록되었습니다!\n**{title}**\n🔗 {link}")
-
-            else:
-                cached_end = datetime.strptime(self.known_events[eid]["end_date"], "%Y-%m-%d").date()
-                if (cached_end - today).days == 1:
-                    role = discord.utils.get(channel.guild.roles, name=ALERT_ROLE_NAME)
-                    mention = role.mention if role else "@everyone"
-                    await channel.send(f"{mention}\n⏰ **{title}** 이벤트가 내일 종료됩니다!\n🔗 {link}")
-
-        self.known_events = updated_cache
-        save_event_cache(updated_cache)
-
-    @app_commands.command(name="이벤트알림설정", description="이벤트 알림 역할을 선택할 수 있는 메시지를 보냅니다.")
-    async def setup_event_role(self, interaction: discord.Interaction):
+    @discord.ui.button(label="이벤트 알림 받기", style=discord.ButtonStyle.primary)
+    async def give_role(self, button, interaction: discord.Interaction):
         role = discord.utils.get(interaction.guild.roles, name=ALERT_ROLE_NAME)
         if not role:
-            await interaction.response.send_message(f"'{ALERT_ROLE_NAME}' 역할이 서버에 없습니다. 먼저 역할을 만들어주세요.", ephemeral=True)
+            await interaction.response.send_message("❌ 역할을 찾을 수 없습니다", ephemeral=True)
             return
 
-        class EventRoleButton(discord.ui.View):
-            @discord.ui.button(label="이벤트 알림 받기", style=discord.ButtonStyle.primary)
-            async def give_role(self, button, i: discord.Interaction):
-                if role in i.user.roles:
-                    await i.response.send_message("이미 역할이 있습니다.", ephemeral=True)
-                else:
-                    await i.user.add_roles(role)
-                    await i.response.send_message("이벤트 알림 역할을 부여했어요!", ephemeral=True)
+        if role in interaction.user.roles:
+            await interaction.user.remove_roles(role)
+            await interaction.response.send_message("이벤트 알림 역할을 제거했어요.", ephemeral=True)
+        else:
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message("이벤트 알림 역할을 부여했어요!", ephemeral=True)
 
-            @discord.ui.button(label="알림 그만 받기", style=discord.ButtonStyle.secondary)
-            async def remove_role(self, button, i: discord.Interaction):
-                if role in i.user.roles:
-                    await i.user.remove_roles(role)
-                    await i.response.send_message("이벤트 알림 역할을 제거했어요.", ephemeral=True)
-                else:
-                    await i.response.send_message("역할이 없습니다.", ephemeral=True)
+# 이벤트 감시 태스크
+event_cache = {}
 
-        await interaction.response.send_message("이벤트 알림 역할을 설정하세요!", view=EventRoleButton(), ephemeral=False)
+@tasks.loop(minutes=60)
+async def check_event_updates():
+    await check_event_updates.bot.wait_until_ready()
+    channel = check_event_updates.bot.get_channel(EVENT_CHANNEL_ID)
+    if not channel:
+        return
 
-async def setup(bot: commands.Bot):
-    await bot.add_cog(EventAlert(bot))
+    today = datetime.now().date()
+    parsed = parse_events()
+    updated_cache = {}
+
+    for event in parsed:
+        eid = event["id"]
+        title = event["title"]
+        link = event["link"]
+        end_date = event["end_date"]
+
+        updated_cache[eid] = {
+            "title": title,
+            "end_date": end_date.isoformat()
+        }
+
+        if eid not in event_cache:
+            role = discord.utils.get(channel.guild.roles, name=ALERT_ROLE_NAME)
+            mention = role.mention if role else "@everyone"
+            await channel.send(f"{mention}\n📢 새로운 이벤트가 등록되었습니다!\n**{title}**\n🔗 {link}")
+
+        elif event_cache[eid]["end_date"] != "2999-12-31":
+            cached_end = datetime.strptime(event_cache[eid]["end_date"], "%Y-%m-%d").date()
+            if (cached_end - today).days == 1:
+                role = discord.utils.get(channel.guild.roles, name=ALERT_ROLE_NAME)
+                mention = role.mention if role else "@everyone"
+                await channel.send(f"{mention}\n⏰ **{title}** 이벤트가 내일 종료됩니다!\n🔗 {link}")
+
+    global event_cache
+    event_cache = updated_cache
+    save_event_cache(event_cache)
+
+# ✅ 여기가 꼭 필요했던 initialize(bot)
+async def initialize(bot: discord.Client):
+    @bot.tree.command(name="이벤트알림설정", description="이벤트 알림 역할을 선택할 수 있는 메시지를 보냅니다.")
+    async def 이벤트알림설정(interaction: discord.Interaction):
+        role = discord.utils.get(interaction.guild.roles, name=ALERT_ROLE_NAME)
+        if not role:
+            await interaction.response.send_message("❌ '이벤트 알림' 역할이 서버에 없습니다. 먼저 역할을 생성해주세요.", ephemeral=True)
+            return
+
+        await interaction.response.send_message("이벤트 알림 역할을 설정하세요!", view=EventRoleView(), ephemeral=False)
+
+    bot.add_view(EventRoleView())
+    check_event_updates.bot = bot
+    global event_cache
+    event_cache = load_event_cache()
+
+    if not check_event_updates.is_running():
+        check_event_updates.start()
