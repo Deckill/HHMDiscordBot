@@ -88,9 +88,11 @@ class EventRoleView(discord.ui.View):
 event_cache = {}
 
 @tasks.loop(minutes=60)
-async def check_event_updates():
-    await check_event_updates.bot.wait_until_ready()
-    channel = check_event_updates.bot.get_channel(EVENT_CHANNEL_ID)
+async def check_event_loop():
+    global event_cache  # ✅ 전역 선언은 최상단에 위치해야 함
+
+    await check_event_loop.bot.wait_until_ready()
+    channel = check_event_loop.bot.get_channel(EVENT_CHANNEL_ID)
     if not channel:
         return
 
@@ -121,7 +123,6 @@ async def check_event_updates():
                 mention = role.mention if role else "@everyone"
                 await channel.send(f"{mention}\n⏰ **{title}** 이벤트가 내일 종료됩니다!\n🔗 {link}")
 
-    global event_cache
     event_cache = updated_cache
     save_event_cache(event_cache)
 
