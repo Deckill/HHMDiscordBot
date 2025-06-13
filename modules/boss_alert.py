@@ -75,12 +75,13 @@ async def check_schedule():
     bot = check_schedule.bot
     logger.info(f"⏰ 지금 시간: {now}")
     for guild in bot.guilds:
-        if guild.id != TARGET_GUILD_ID:
-            continue
+        # if guild.id != TARGET_GUILD_ID:
+        #     continue
         channel = bot.get_channel(channel_id)
         if not channel:
+            logger.info("채널을 찾을 수 없습니다. 알림을 건너뜁니다.")
             continue
-        if now.endswith(":59"):
+        if now.endswith(":40"):
             await send_notification("barrier", channel, guild)
         if now in BOSS_TIMES:
             await send_notification("boss", channel, guild)
