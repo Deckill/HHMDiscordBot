@@ -59,11 +59,13 @@ def create_embed(type_name, emoji):
 
 async def send_notification(notification_type, channel, guild):
     if notification_type == "barrier":
+        logger.info("결계 알림 송신 시작")
         role = discord.utils.get(guild.roles, name="결계 알림")
         if role and any(not member.bot for member in role.members):
             await channel.send(content=f"{role.mention}", embed=create_embed("결계", "🌟"))
             logger.info("결계 알림 송신됨")
     elif notification_type == "boss":
+        logger.info("보스 알림 송신 시작")
         role = discord.utils.get(guild.roles, name="필드 보스")
         if role and any(not member.bot for member in role.members):
             await channel.send(content=f"{role.mention}", embed=create_embed("보스", "🔥"))
@@ -81,10 +83,11 @@ async def check_schedule():
         if not channel:
             logger.info("채널을 찾을 수 없습니다. 알림을 건너뜁니다.")
             continue
-        if now.endswith(":43"):
+        if now.endswith(":48"):
             logger.info("결계 알림 시간 도달")
             await send_notification("barrier", channel, guild)
         if now in BOSS_TIMES:
+            logger.info("보스 알림 시간 도달")
             await send_notification("boss", channel, guild)
 
 async def initialize(bot: discord.Client):
