@@ -81,7 +81,8 @@ async def check_schedule():
         if not channel:
             logger.info("채널을 찾을 수 없습니다. 알림을 건너뜁니다.")
             continue
-        if now.endswith(":40"):
+        if now.endswith(":43"):
+            logger.info("결계 알림 시간 도달")
             await send_notification("barrier", channel, guild)
         if now in BOSS_TIMES:
             await send_notification("boss", channel, guild)
